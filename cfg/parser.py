@@ -1,6 +1,6 @@
 import re
 from cfg.cfg import CFG
-from cfg.Rule import Term, Nterm, Rule
+from cfg.rule import Term, Nterm, Rule, Epsilon
 
 
 class CFG_Parser():
@@ -29,8 +29,11 @@ class CFG_Parser():
         return Nterm(nterm)
 
     def get_term_or_eps(self):
-        if self.glance().isalpha() or self.glance() == '_':
+        if self.glance().isalpha():
             return Term(self.next())
+        if self.glance() == '_':
+            self.next()
+            return Epsilon()
 
     def get_arrow(self):
         if self.glance() == '-':
@@ -78,6 +81,8 @@ class CFG_Parser():
                     nterms_set.add(tnt)
 
             new_rule = Rule(rule_list[0], rule_list[2:])
+            print('NEW RULE:', new_rule)
             rules_set.add(new_rule)
+            print(len(rules_set))
 
         return CFG(rules_set=rules_set, terms_set=terms_set, nterms_set=nterms_set)
