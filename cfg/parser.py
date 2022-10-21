@@ -1,5 +1,6 @@
 import re
-from cfg.cfg import Term, Nterm, Rule, CFG
+from cfg.cfg import CFG
+from cfg.Rule import Term, Nterm, Rule
 
 
 class CFG_Parser():
@@ -48,7 +49,6 @@ class CFG_Parser():
             shtuchki.append(self.get_arrow())
         return list(filter(bool, shtuchki))
 
-
     def parse_rules(self):
         seq = self.parse_seq()
         rules_set = set()
@@ -62,13 +62,13 @@ class CFG_Parser():
             try:
                 arrow_index = seq.index('->')
                 second_arrow_index = seq.index('->', arrow_index + 1)
-            except: 
+            except:
                 rules_raw.append(seq)
                 break
-            
+
             rules_raw.append(seq[:second_arrow_index-1])
             seq = seq[second_arrow_index-1:]
-        
+
         for rule_list in rules_raw:
             assert rule_list[1] == '->'
             for tnt in rule_list:
@@ -76,7 +76,7 @@ class CFG_Parser():
                     terms_set.add(tnt)
                 elif isinstance(tnt, Nterm):
                     nterms_set.add(tnt)
-            
+
             new_rule = Rule(rule_list[0], rule_list[2:])
             rules_set.add(new_rule)
 
