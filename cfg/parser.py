@@ -1,5 +1,5 @@
 import re
-from cfg import Term, Nterm, Rule, CFG
+from cfg.cfg import Term, Nterm, Rule, CFG
 
 
 class CFG_Parser():
@@ -81,14 +81,3 @@ class CFG_Parser():
             rules_set.add(new_rule)
 
         return CFG(rules_set=rules_set, terms_set=terms_set, nterms_set=nterms_set)
-
-
-if __name__ == '__main__':
-    text = '''
-        [S] -> [A][T]
-        [ERa234] -> a[R95]__db
-    '''
-
-
-    parser = CFG_Parser(text)
-    print(parser.parse_rules())
