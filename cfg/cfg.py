@@ -22,8 +22,8 @@ class CFG():
             for tnt in rule_list:
                 if isinstance(tnt, Term):
                     terms_set.add(tnt)
-        for t in terms_set:
-            print(t)
+        # for t in terms_set:
+        #     print(t)
         return terms_set
 
     def get_nterms(self, rules_set):
@@ -33,8 +33,8 @@ class CFG():
             for tnt in rule_list:
                 if isinstance(tnt, Nterm):
                     nterms_set.add(tnt)
-        for t in nterms_set:
-            print(t)
+        # for t in nterms_set:
+        #     print(t)
         return nterms_set
 
     def __repr__(self):
@@ -62,6 +62,50 @@ class CFG():
         self.parent_relations = parent_relations
 
         return self
+    
+    def remove_chain_rules(self):
+        self._find_chain_rules()
+        chainrules = self.ChR
+
+        if len(self.nterms) == len(chainrules):
+            return self
+        rules = set()
+        for rule in self.rules:
+            left = rule.left
+            rights = rule.rights
+            if len(rights) == 1 and type(rights[0]) == Nterm and [left.name, rights[0].name] in chainrules:
+                pass
+            else:
+                rules.add(rule)
+        copy_rules = deepcopy(rules)
+        for ch in chainrules:
+            for rule in copy_rules:
+                left = rule.left
+                rights = rule.rights
+                if ch[1] == left.name:
+                    rules.add(Rule(Nterm(ch[0]), rights))
+        return CFG(rules)
+
+    def _find_chain_rules(self):
+        chainrules = []
+        for nterm in self.nterms:
+                chainrules.append([nterm.name, nterm.name])
+        while True:
+            upow = len(chainrules)
+            for rule in self.rules:
+                left = rule.left
+                rights = rule.rights
+                if len(rights) == 1 and type(rights[0]) == Nterm:
+                    r = rights[0]
+                    for ch in chainrules:
+                        if ch[1] == left.name:
+                            pair  = [ch[0], r.name]
+                            if not pair in chainrules:
+                                chainrules.append(pair)
+            new_upow = len(chainrules)
+            if upow == new_upow:
+                break
+        self.ChR = chainrules
 
     def clean(self):
         # убирает нетерминалы:
