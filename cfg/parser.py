@@ -51,6 +51,8 @@ class CFG_Parser():
             if not to_append:
                 break
             shtuchki.append(to_append)
+        
+        assert self.string == ''
         return list(filter(bool, shtuchki))
 
     def parse_rules(self):
@@ -60,7 +62,7 @@ class CFG_Parser():
         nterms_set = set()
 
         rules_raw = []
-        
+
         arrow_index = -1
         while arrow_index:
             try:
