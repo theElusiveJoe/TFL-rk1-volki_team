@@ -1,6 +1,6 @@
 import re
-from cfg.cfg import CFG
-from cfg.rule import Term, Nterm, Rule, Epsilon
+from cfg import CFG
+from rule import Term, Nterm, Rule, Epsilon
 
 
 class CFG_Parser():
@@ -58,11 +58,7 @@ class CFG_Parser():
     def parse_rules(self):
         seq = self.parse_seq()
         rules_set = set()
-        terms_set = set()
-        nterms_set = set()
-
         rules_raw = []
-
         arrow_index = -1
         while arrow_index:
             try:
@@ -79,15 +75,9 @@ class CFG_Parser():
 
         for rule_list in rules_raw:
             assert rule_list[1] == '->'
-            for tnt in rule_list:
-                if isinstance(tnt, Term):
-                    terms_set.add(tnt)
-                elif isinstance(tnt, Nterm):
-                    nterms_set.add(tnt)
-
             new_rule = Rule(rule_list[0], rule_list[2:])
             print('NEW RULE:', new_rule)
             rules_set.add(new_rule)
             print(len(rules_set))
 
-        return CFG(rules_set=rules_set, terms_set=terms_set, nterms_set=nterms_set)
+        return CFG(rules_set)
