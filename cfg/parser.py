@@ -9,12 +9,12 @@ class CFG_Parser():
 
     def glance(self):
         if self.string == '':
-            return ''
+            return False
         return self.string[0]
 
     def next(self):
         if self.string == '':
-            return -1
+            return False
         ret = self.string[0]
         self.string = self.string[1:]
         return ret
@@ -47,9 +47,12 @@ class CFG_Parser():
     def parse_seq(self):
         shtuchki = []
         while self.string:
-            shtuchki.append(self.get_nterm())
-            shtuchki.append(self.get_term_or_eps())
-            shtuchki.append(self.get_arrow())
+            to_append = self.get_nterm() or self.get_term_or_eps() or self.get_arrow()
+            if not to_append:
+                break
+            shtuchki.append(to_append)
+        
+        assert self.string == ''
         return list(filter(bool, shtuchki))
 
     def parse_rules(self):
@@ -67,6 +70,8 @@ class CFG_Parser():
 
             rules_raw.append(seq[:second_arrow_index-1])
             seq = seq[second_arrow_index-1:]
+
+        print('Here')
 
         for rule_list in rules_raw:
             assert rule_list[1] == '->'

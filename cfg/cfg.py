@@ -109,11 +109,12 @@ class CFG():
 
     def clean(self):
         # убирает нетерминалы:
+        # 0. ни во что не раскрывающиеся
         # 1. раскрывающиеся только в эпсилон
         # 2. непорождающие
         # 3. недостижимые
         print('cleaning')
-        
+
         self._find_unreachable_symbols()
         self.rules = set(
             filter(lambda x: x.left not in self.unreachable, self.rules))
@@ -126,7 +127,7 @@ class CFG():
                 map(lambda y: y if y not in self.Ne else Epsilon(), x.rights))),
             self.rules
         ))
-        
+
         self.buid_dependency_graph()
 
     def _find_nullable_symbols(self):
@@ -171,3 +172,14 @@ class CFG():
                 break
 
         self.unreachable = unallocated
+
+    def is_suitable_for_task_2(self):
+        return all(
+            map(
+                lambda x: len(
+                    list(filter(lambda y: isinstance(y, Nterm), x.rights))) <= 1,
+                self.rules
+            )
+        )
+
+    # def find_cycles_in_trs(self):
