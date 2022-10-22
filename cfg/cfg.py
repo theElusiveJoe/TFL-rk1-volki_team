@@ -1,16 +1,41 @@
 from copy import deepcopy
 
-from cfg.rule import Rule, Term, Nterm, Epsilon
+from rule import Rule, Term, Nterm, Epsilon
 
 
 class CFG():
-    def __init__(self, rules_set, terms_set, nterms_set):
+    def __init__(self, rules_set):
         self.rules = rules_set
-        self.terms = terms_set
-        self.nterms = nterms_set
-
+        self.terms = self.get_terms(rules_set)
+        self.nterms = self.get_nterms(rules_set)
+        assert all(map(
+            lambda x: any(map(lambda y: y.left == x, rules_set)),
+            self.nterms
+        ))
         self.buid_dependency_graph()
         self.start = Nterm('[S]')
+
+    def get_terms(self, rules_set):
+        terms_set = set()
+        for rule in rules_set:
+            rule_list = [rule.left] + rule.rights
+            for tnt in rule_list:
+                if isinstance(tnt, Term):
+                    terms_set.add(tnt)
+        for t in terms_set:
+            print(t)
+        return terms_set
+
+    def get_nterms(self, rules_set):
+        nterms_set = set()
+        for rule in rules_set:
+            rule_list = [rule.left] + rule.rights
+            for tnt in rule_list:
+                if isinstance(tnt, Nterm):
+                    nterms_set.add(tnt)
+        for t in nterms_set:
+            print(t)
+        return nterms_set
 
     def __repr__(self):
         return '\n'.join(map(str, self.rules))
