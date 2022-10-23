@@ -1,5 +1,4 @@
 from copy import deepcopy
-from itertools import combinations
 
 from rule import Rule, Term, Nterm, Epsilon
 
@@ -23,8 +22,8 @@ class CFG():
             for tnt in rule_list:
                 if isinstance(tnt, Term):
                     terms_set.add(tnt)
-        for t in terms_set:
-            print(t)
+        #for t in terms_set:
+         #   print(t)
         return terms_set
 
     def get_nterms(self, rules_set):
@@ -34,8 +33,8 @@ class CFG():
             for tnt in rule_list:
                 if isinstance(tnt, Nterm):
                     nterms_set.add(tnt)
-        for t in nterms_set:
-            print(t)
+        #for t in nterms_set:
+         #   print(t)
         return nterms_set
 
     def __repr__(self):

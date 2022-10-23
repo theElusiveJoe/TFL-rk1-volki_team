@@ -80,14 +80,3 @@ class CFG_Parser():
 
         return CFG(rules_set)
 
-p = CFG_Parser('''
-[S] -> [A][B][C]d
-[A] -> a
-[A] -> _
-[B] -> [A][C]
-[C] -> c
-[C] -> _
-''')
-
-cfg = p.parse_rules()
-cfg.remove_epsilon_rules()
