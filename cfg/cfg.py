@@ -3,7 +3,7 @@ import networkx as nx
 import uuid
 
 
-from cfg.rule import Rule, Term, Nterm, Epsilon
+from rule import Rule, Term, Nterm, Epsilon
 import uuid
 
 
@@ -28,6 +28,7 @@ class CFG():
         self.rules = rules_set
         self.terms = self.get_terms(rules_set)
         self.nterms = self.get_nterms(rules_set)
+        self.remove_nterms_that_dont_present_at_left()
         # assert all(map(
         #     lambda x: any(map(lambda y: y.left == x, rules_set)),
         #     self.nterms
@@ -83,6 +84,23 @@ class CFG():
         self.parent_relations = parent_relations
 
         return self
+
+    def remove_nterms_that_dont_present_at_left(self):
+        presenting_nterms = set()
+        new_rules = set()
+        for rule in self.rules:
+            presenting_nterms.add(rule.left)
+        for rule in self.rules:
+            new_right = []
+            for right in rule.rights:
+                if (isinstance(right, Term) or isinstance(right, Nterm) and right in presenting_nterms):
+                    new_right.append(right)
+            if (len(new_right) == 0):
+                new_right.append(Epsilon())
+            new_rules.add(Rule(rule.left, new_right))
+        self.rules = new_rules
+            
+
     
     def remove_unreachable_symbols(self):
         new_cfg = deepcopy(self)
