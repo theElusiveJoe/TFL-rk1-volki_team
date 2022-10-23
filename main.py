@@ -1,5 +1,15 @@
 from cfg.parser import CFG_Parser
 
+def check_1(grammar):
+    g1 = grammar.toCNF()
+    print('G!:', g1)
+    return g1.check_task_1()
+
+def check_2(grammar):
+    pass
+    # grammar.remove_nullable_symbols()
+    # return grammar.check_task_2()
+
 def main():
     input_file = open("test.CFG", "r")
     output_file = open("result", "w")
@@ -8,6 +18,14 @@ def main():
     for line in input_file.readlines():
         test += line
     
+
+
+    # grammar = CFG_Parser(test).parse_rules()
+    # print(grammar)
+    # grammar = grammar.clean()
+    # print(grammar)
+    # return
+
     try:
         grammar = CFG_Parser(test).parse_rules()
     except Exception as e:
@@ -15,16 +33,13 @@ def main():
         output_file.write('syntax error') 
         print('SYNTAX ERROR')
     else:
-        grammar.clean()
-
-        # проверяю первый
-        g1 = grammar.toCNF()
-
-        # print(g1)
-        if g1.check_task_1():
+        print(grammar)
+        if check_1(grammar):
             output_file.write('regular')    
             print('REGULAR')
-        
+        elif check_2(grammar):
+            output_file.write('non-regular')    
+            print('NONREGULAR')     
         else:
             output_file.write('unknown')    
             print('UNKNOWN')
