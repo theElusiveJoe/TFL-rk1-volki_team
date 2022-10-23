@@ -1,5 +1,7 @@
 from copy import deepcopy
 import networkx as nx
+import uuid
+
 
 from rule import Rule, Term, Nterm, Epsilon
 
@@ -200,8 +202,37 @@ class CFG():
             if upow == new_upow:
                 break
         self.ChR = chainrules
+    
+    def several_nonterm_removal(self):
+        def create_unique_str():
+            return f"[U{uuid.uuid4().hex[:2].upper()}]" 
         
-     def clean(self):
+        rules = set()
+        new_rules = []
+        to_symbol = {}
+        for rule in self.rules:
+            left = rule.left
+            rights = rule.rights
+            if len(rights) == 1 or all(map(lambda x: isinstance(x, Nterm), rights)):
+                new_rules.append(rule)
+                continue
+            rights_new = []
+            for r in deepcopy(rights):
+                if isinstance(r, Term):
+                    if not r.symbol in to_symbol.keys():
+                        new_nterm = create_unique_str()
+                        to_symbol[r.symbol] = new_nterm
+                        new_rules.append(Rule(Nterm(new_nterm), [Term(r.symbol)]))
+                        rights_new.append(Nterm(new_nterm))
+                    else:
+                        rights_new.append(Nterm(to_symbol[r.symbol]))
+                else:
+                    rights_new.append(r)
+            new_rules.append(Rule(left, rights_new))
+        return CFG(new_rules)       
+
+        
+    def clean(self):
         # убирает нетерминалы:
         # 0. ни во что не раскрывающиеся
         # 1. раскрывающиеся только в эпсилон
