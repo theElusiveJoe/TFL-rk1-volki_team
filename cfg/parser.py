@@ -1,6 +1,6 @@
 import re
-from cfg import CFG
-from rule import Term, Nterm, Rule, Epsilon
+from cfg.cfg import CFG
+from cfg.rule import Term, Nterm, Rule, Epsilon
 
 
 class CFG_Parser():
@@ -70,8 +70,6 @@ class CFG_Parser():
 
             rules_raw.append(seq[:second_arrow_index-1])
             seq = seq[second_arrow_index-1:]
-
-        print('Here')
 
         for rule_list in rules_raw:
             assert rule_list[1] == '->'

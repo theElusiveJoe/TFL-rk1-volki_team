@@ -1,6 +1,23 @@
 from copy import deepcopy
+import networkx as nx
 
-from rule import Rule, Term, Nterm, Epsilon
+from cfg.rule import Rule, Term, Nterm, Epsilon
+
+
+class Mutually_Recursive_Set():
+    # https://sites.cs.ucsb.edu/~omer/DOWNLOADABLE/cfg-reg09.pdf
+    def __init__(self, members):
+        self.members = set(members)
+
+
+    def add_members(self, members):
+        self.members.update(members)
+
+    def can_be_added(self, members):
+        return self.members & members
+
+    def __repr__(self):
+        return str(self.members)
 
 
 class CFG():
@@ -107,28 +124,28 @@ class CFG():
                 break
         self.ChR = chainrules
 
-    def clean(self):
+    # def clean(self):
         # убирает нетерминалы:
         # 0. ни во что не раскрывающиеся
         # 1. раскрывающиеся только в эпсилон
         # 2. непорождающие
         # 3. недостижимые
-        print('cleaning')
+        # print('cleaning')
 
-        self._find_unreachable_symbols()
-        self.rules = set(
-            filter(lambda x: x.left not in self.unreachable, self.rules))
-        self.nterms = self.nterms - self.unreachable
+        # self._find_unreachable_symbols()
+        # self.rules = set(
+        #     filter(lambda x: x.left not in self.unreachable, self.rules))
+        # self.nterms = self.nterms - self.unreachable
 
-        self._find_nullable_symbols()
-        self.rules = set(filter(lambda x: x.left not in self.Ne, self.rules))
-        self.rules = set(map(
-            lambda x: Rule(x.left, list(
-                map(lambda y: y if y not in self.Ne else Epsilon(), x.rights))),
-            self.rules
-        ))
+        # self._find_nullable_symbols()
+        # self.rules = set(filter(lambda x: x.left not in self.Ne, self.rules))
+        # self.rules = set(map(
+        #     lambda x: Rule(x.left, list(
+        #         map(lambda y: y if y not in self.Ne else Epsilon(), x.rights))),
+        #     self.rules
+        # ))
 
-        self.buid_dependency_graph()
+        # self.buid_dependency_graph()
 
     def _find_nullable_symbols(self):
         self.generative = set()
@@ -182,4 +199,81 @@ class CFG():
             )
         )
 
-    # def find_cycles_in_trs(self):
+    def build_mureses(self):
+        g = nx.DiGraph(self.child_relations)
+        self.cycles = list(nx.simple_cycles(g))
+        cycles = list(map(set, self.cycles))
+
+        while True:
+            cycles = list(filter(bool, cycles))
+            print('CYCLES NOW:', cycles)
+            cycles_copy = deepcopy(cycles)
+
+            flag_changed = False
+
+            for i, x in enumerate(cycles_copy):
+                for j, y in enumerate(cycles_copy):
+                    if x == y: 
+                        continue
+                    if x & y:
+                        cycles[i] = x|y
+                        cycles[j] = set()
+                        flag_changed = True
+                        break
+
+            if not flag_changed:
+                break
+        
+        self.mureces = []
+        for cycle in cycles:
+            self.mureces.append(Mutually_Recursive_Set(cycle))
+
+        print(self.mureces)
+
+    def check_murece_on_monocromatic_cycles(self, murece):
+        murece_rules = set(filter(lambda x: x.left in murece.members and set(x.rights) & murece.members, self.rules))
+
+        members = list(murece.members)
+        M = [['0' for _ in range(len(members))] for _ in range(len(members))]
+
+        for i, _ in enumerate(M):
+            for j, _ in enumerate(M):
+                suitable_rules_for_edge = list(filter(lambda x: x.left == members[i] and members[j] in x.rights, murece_rules)) 
+                for sr in suitable_rules_for_edge:
+                    if sr.rights[0] == members[j]:
+                        if M[i][j] in ['0', 'l']:
+                             M[i][j] = 'l'
+                        else:
+                            print('cant color correctly')
+                            return False
+
+                    if len(sr.rights) > 1 and sr.rights[1] == members[j]:
+                        if M[i][j] in ['0', 'r']:
+                             M[i][j] = 'r'
+                        else:
+                            print('cant color correctly')
+                            return False
+
+        cycles_base = list(filter(
+            lambda x: any(map(lambda x: x in murece.members, x)), 
+            self.cycles))
+        print(self.cycles)
+        print(cycles_base)
+        if len(cycles_base)<=1:
+            return True
+        for cycle in cycles_base:
+            cycle = cycle.append(cycle[0])
+            pairs = zip(cycle[:-1], cycle[1])
+            color_l, color_r = False, False
+            for pair in pairs:
+                i = members.index(pair[0])
+                j = members.index(pair[1])
+                color_l = color_l or M[i][j] == 'l'
+                color_r = color_r or M[i][j] == 'r'
+                if color_l and color_r:
+                    print('cycle is colored badly')
+                    return False
+
+    def check_task_1(self):
+        self.build_mureses
+        return all(map(lambda x: self.check_murece_on_monocromatic_cycles(x), self.mureces))
