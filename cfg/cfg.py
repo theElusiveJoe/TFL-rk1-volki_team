@@ -201,7 +201,7 @@ class CFG():
                 break
         self.ChR = chainrules
         
-     def clean(self):
+    def clean(self):
         # убирает нетерминалы:
         # 0. ни во что не раскрывающиеся
         # 1. раскрывающиеся только в эпсилон
