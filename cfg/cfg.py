@@ -28,7 +28,7 @@ class CFG():
         self.rules = rules_set
         self.terms = self.get_terms(rules_set)
         self.nterms = self.get_nterms(rules_set)
-        self.remove_nterms_that_dont_present_at_left()
+    
         # assert all(map(
         #     lambda x: any(map(lambda y: y.left == x, rules_set)),
         #     self.nterms
@@ -37,6 +37,9 @@ class CFG():
         self.buid_dependency_graph()
         self.clean()
 
+    #извлекает список всех термов из множества правил КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def get_terms(self, rules_set):
         terms_set = set()
         for rule in rules_set:
@@ -48,6 +51,9 @@ class CFG():
         #     print(t)
         return terms_set
 
+    #извлекает список всех гетермов из множества правил КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def get_nterms(self, rules_set):
         nterms_set = set()
         for rule in rules_set:
@@ -62,6 +68,9 @@ class CFG():
     def __repr__(self):
         return '\n'.join(map(str, self.rules))
 
+    #Строит граф зависимостей в КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def buid_dependency_graph(self):
         child_relations = {}
         parent_relations = {}
@@ -85,12 +94,12 @@ class CFG():
 
         return self
 
-    def remove_nterms_that_dont_present_at_left(self):
+    def remove_nterms_that_dont_present_at_left(self, rules):
         presenting_nterms = set()
         new_rules = set()
-        for rule in self.rules:
+        for rule in rules:
             presenting_nterms.add(rule.left)
-        for rule in self.rules:
+        for rule in rules:
             new_right = []
             for right in rule.rights:
                 if (isinstance(right, Term) or isinstance(right, Nterm) and right in presenting_nterms):
@@ -98,7 +107,7 @@ class CFG():
             if (len(new_right) == 0):
                 new_right.append(Epsilon())
             new_rules.add(Rule(rule.left, new_right))
-        self.rules = new_rules
+        return new_rules
             
 
     
@@ -129,6 +138,9 @@ class CFG():
             new_rules.add(Rule(Nterm("[S]"), [Epsilon()]))
 
         new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules(new_rules))
+        new_rules = self.remove_rules_with_only_eps_right(self.remove_nterms_that_dont_present_at_left(new_rules))
+        if (self.start in self.collapsing):
+            new_rules.add(Rule(Nterm("[S]"), [Epsilon()]))
         return CFG(new_rules)
 
     def remove_rules_with_only_eps_right(self, rules):
