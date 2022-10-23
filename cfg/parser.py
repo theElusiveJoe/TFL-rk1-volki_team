@@ -79,4 +79,3 @@ class CFG_Parser():
             print(len(rules_set))
 
         return CFG(rules_set)
-
