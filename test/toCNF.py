@@ -41,7 +41,21 @@ cnf = cnf.remove_epsilon_rules()
 a2 = CFG_Parser(s2)
 c2 = a2.parse_rules()
 cnf = c2.remove_chain_rules().remove_nullable_symbols()
+
+s3 = """
+[S] -> [A]c
+[A] -> [S][D]
+[D] -> a[D]
+[A] -> a
+"""
+a3 = CFG_Parser(s2)
+c3 = a3.parse_rules()
+print(len(c3.rules))
+for i in c3.rules:
+    print(i.left, i.rights)
+c3 = c3.remove_chain_rules().remove_useless_rules().several_nonterm_removal()
+# c3 = c3.remove_useless_rules()
 print("--------------")
-print(len(cnf.rules))
-for i in cnf.rules:
+print(len(c3.rules))
+for i in c3.rules:
     print(i.left, i.rights)

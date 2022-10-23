@@ -209,7 +209,38 @@ class CFG():
         self.ChR = chainrules
 
     def remove_useless_rules(self):
-        return self
+        return self.remove_nongenerating_rules().remove_unreachable_symbols()
+
+    def remove_nongenerating_rules(self):
+        genetaring_nterm = set()
+        for rule in self.rules:
+            left = rule.left
+            rights = rule.rights
+            if all(map(lambda x: isinstance(x, Term), rights)):
+                genetaring_nterm.add(left.name)
+        while True:
+            upow = len(genetaring_nterm)
+            for rule in self.rules:
+                left = rule.left
+                rights = rule.rights
+                flag = True
+                for r in rights:
+                    if isinstance(r, Nterm) and not r.name in genetaring_nterm:
+                        flag  = False
+                        break
+                if flag:
+                    genetaring_nterm.add(left.name)
+
+            new_upow = len(genetaring_nterm)
+            if upow == new_upow:
+                break
+        new_rules = []
+        for rule in self.rules:
+            rights = rule.rights
+            if any(map(lambda x: isinstance(x, Nterm) and not x.name in genetaring_nterm, rights)):
+                continue
+            new_rules.append(rule)
+        return CFG(new_rules)
     
     def several_nonterm_removal(self):
         def create_unique_str():
