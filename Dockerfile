@@ -30,7 +30,6 @@ RUN apt-get update && apt-get install -y \
  python3-setuptools
 RUN python3.7 -m pip install networkx
 
-RUN rlc dummy_regulator.ref
 RUN rlc test_count.ref
 RUN rlc test_gen.ref
 RUN rlc total_count.ref

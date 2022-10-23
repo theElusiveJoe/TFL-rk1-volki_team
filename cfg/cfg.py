@@ -3,7 +3,7 @@ import networkx as nx
 import uuid
 
 
-from rule import Rule, Term, Nterm, Epsilon
+from cfg.rule import Rule, Term, Nterm, Epsilon
 import uuid
 
 
@@ -28,12 +28,13 @@ class CFG():
         self.rules = rules_set
         self.terms = self.get_terms(rules_set)
         self.nterms = self.get_nterms(rules_set)
-        assert all(map(
-            lambda x: any(map(lambda y: y.left == x, rules_set)),
-            self.nterms
-        ))
-        self.buid_dependency_graph()
+        # assert all(map(
+        #     lambda x: any(map(lambda y: y.left == x, rules_set)),
+        #     self.nterms
+        # ))
         self.start = Nterm('[S]')
+        self.buid_dependency_graph()
+        self.clean()
 
     def get_terms(self, rules_set):
         terms_set = set()
@@ -107,7 +108,7 @@ class CFG():
         new_rules = self.remove_rules_with_only_eps_right(new_rules)
         self._find_collapsing()
         if (self.start in self.collapsing):
-            new_rules.add(Rule(Term("[S]"), [Epsilon()]))
+            new_rules.add(Rule(Nterm("[S]"), [Epsilon()]))
 
         new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules(new_rules))
         return CFG(new_rules)
@@ -296,7 +297,7 @@ class CFG():
         # 1. раскрывающиеся только в эпсилон
         # 2. непорождающие
         # 3. недостижимые
-        print('cleaning')
+        # print('cleaning')
 
         return self.remove_unreachable_symbols().remove_nullable_symbols().buid_dependency_graph()
 
@@ -354,13 +355,17 @@ class CFG():
         )
 
     def build_mureses(self):
+        # print('-----------------')
+        # print('BUILDING MURECES')
+        # print('-----------------')
         g = nx.DiGraph(self.child_relations)
         self.cycles = list(nx.simple_cycles(g))
         cycles = list(map(set, self.cycles))
+        # for cycle in cycles:
+            # print('->cycle', cycle)
 
         while True:
             cycles = list(filter(bool, cycles))
-            print('CYCLES NOW:', cycles)
             cycles_copy = deepcopy(cycles)
 
             flag_changed = False
@@ -382,52 +387,71 @@ class CFG():
         for cycle in cycles:
             self.mureces.append(Mutually_Recursive_Set(cycle))
 
-        print(self.mureces)
 
     def check_murece_on_monocromatic_cycles(self, murece):
+        # print('-----------------')
+        # print('CHECKING MURACE', murece.members)
+        # print('-----------------')
         murece_rules = set(filter(lambda x: x.left in murece.members and set(x.rights) & murece.members, self.rules))
-
         members = list(murece.members)
         M = [['0' for _ in range(len(members))] for _ in range(len(members))]
 
+        color_l, color_r = False, False
         for i, _ in enumerate(M):
             for j, _ in enumerate(M):
                 suitable_rules_for_edge = list(filter(lambda x: x.left == members[i] and members[j] in x.rights, murece_rules)) 
                 for sr in suitable_rules_for_edge:
                     if sr.rights[0] == members[j]:
-                        if M[i][j] in ['0', 'l']:
-                             M[i][j] = 'l'
-                        else:
-                            print('cant color correctly')
-                            return False
+                        color_l = True
+                        # if M[i][j] in ['0', 'l']:
+                        #      M[i][j] = 'l'
+                        # else:
+                        #     print('cant color correctly')
+                        #     return False
 
                     if len(sr.rights) > 1 and sr.rights[1] == members[j]:
-                        if M[i][j] in ['0', 'r']:
-                             M[i][j] = 'r'
-                        else:
-                            print('cant color correctly')
-                            return False
+                        # if M[i][j] in ['0', 'r']:
+                        #      M[i][j] = 'r'
+                        # else:
+                        #     print('cant color correctly')
+                        #     return False
+                        color_r = True
+                    if color_l and color_r:
+                        print('cycle is colored badly')
+                        return False
 
-        cycles_base = list(filter(
-            lambda x: any(map(lambda x: x in murece.members, x)), 
-            self.cycles))
-        print(self.cycles)
-        print(cycles_base)
-        if len(cycles_base)<=1:
-            return True
-        for cycle in cycles_base:
-            cycle = cycle.append(cycle[0])
-            pairs = zip(cycle[:-1], cycle[1])
-            color_l, color_r = False, False
-            for pair in pairs:
-                i = members.index(pair[0])
-                j = members.index(pair[1])
-                color_l = color_l or M[i][j] == 'l'
-                color_r = color_r or M[i][j] == 'r'
-                if color_l and color_r:
-                    print('cycle is colored badly')
-                    return False
+
+        # flatten_matrix = [x for x in list for list in matrix]
+        # print('MEMVERS:', members)
+        # print('FLATTEN MATRIX', )
+
+        # cycles_base = list(filter(
+        #     lambda x: any(map(lambda x: x in murece.members, x)), 
+        #     self.cycles))
+        # print(self.cycles)
+        # print(cycles_base)
+        # if len(cycles_base)<=1:
+        #     return False
+
+
+        # color_l, color_r = False, False
+        # for cycle in cycles_base:
+        #     cycle = cycle.append(cycle[0])
+        #     pairs = zip(cycle[:-1], cycle[1])
+        #     for pair in pairs:
+        #         i = members.index(pair[0])
+        #         j = members.index(pair[1])
+        #         color_l = color_l or M[i][j] == 'l'
+        #         color_r = color_r or M[i][j] == 'r'
+        #         if color_l and color_r:
+        #             print('cycle is colored badly')
+        #             return False
+        return True
 
     def check_task_1(self):
-        self.build_mureses
+        self.build_mureses()
+        # print('MURECES:')
+        for murece in self.mureces:
+            print(murece.members)
+        # print('TRYING TO COLOR MURECES')
         return all(map(lambda x: self.check_murece_on_monocromatic_cycles(x), self.mureces))
