@@ -109,23 +109,24 @@ class CFG():
         if (self.start in self.collapsing):
             new_rules.add(Rule(Term("[S]"), [Epsilon()]))
 
-        new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules())
+        new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules(new_rules))
         return CFG(new_rules)
 
     def remove_rules_with_only_eps_right(self, rules):
         new_rules = set()
         for rule in rules:
-            if (len(rule.rights) == 1 and isinstance(rule.rights[0], Epsilon)):
+            if (all(map(lambda x: isinstance(x, Epsilon), rule.rights))):
                 continue
-            new_rules.add(rule)
+            new_rules.add(deepcopy(rule))
         return new_rules
 
-    def _gen_all_possible_combinations_of_rules(self):
+    def _gen_all_possible_combinations_of_rules(self, rules):
         combinations = set()
-        for rule in self.rules:
-            right_comb = self._gen_right_side_combinations(rule.rights, [], 0)
-            for comb in right_comb:
-                combinations.add(Rule(rule.left, comb))
+        for rule in rules:
+            if any(map(lambda x: x in self.collapsing, rule.rights)):
+                right_comb = self._gen_right_side_combinations(rule.rights, [], 0)
+                for comb in right_comb:
+                    combinations.add(Rule(rule.left, comb))
         return combinations
 
     def _gen_right_side_combinations(self, right, current_c, current_i):
@@ -159,8 +160,11 @@ class CFG():
                     break
         return self
 
+    #нормальна форма Хомского
+    def toCNF(self):
+        return self.remove_long_rules().remove_epsilon_rules().remove_chain_rules().remove_useless_rules().several_nonterm_removal()
 
-        
+
     def remove_chain_rules(self):
         self._find_chain_rules()
         chainrules = self.ChR
@@ -203,6 +207,40 @@ class CFG():
             if upow == new_upow:
                 break
         self.ChR = chainrules
+
+    def remove_useless_rules(self):
+        return self.remove_nongenerating_rules().remove_unreachable_symbols()
+
+    def remove_nongenerating_rules(self):
+        genetaring_nterm = set()
+        for rule in self.rules:
+            left = rule.left
+            rights = rule.rights
+            if all(map(lambda x: isinstance(x, Term), rights)):
+                genetaring_nterm.add(left.name)
+        while True:
+            upow = len(genetaring_nterm)
+            for rule in self.rules:
+                left = rule.left
+                rights = rule.rights
+                flag = True
+                for r in rights:
+                    if isinstance(r, Nterm) and not r.name in genetaring_nterm:
+                        flag  = False
+                        break
+                if flag:
+                    genetaring_nterm.add(left.name)
+
+            new_upow = len(genetaring_nterm)
+            if upow == new_upow:
+                break
+        new_rules = []
+        for rule in self.rules:
+            rights = rule.rights
+            if any(map(lambda x: isinstance(x, Nterm) and not x.name in genetaring_nterm, rights)):
+                continue
+            new_rules.append(rule)
+        return CFG(new_rules)
     
     def several_nonterm_removal(self):
         def create_unique_str():
@@ -239,8 +277,6 @@ class CFG():
                 new_rules = new_rules.union(self._split_long_rule(rule))
             else:
                 new_rules.add(deepcopy(rule))
-        for r in new_rules:
-            print(r.left, "->", r.rights)
         return CFG(new_rules)
 
     def _split_long_rule(self, rule):
