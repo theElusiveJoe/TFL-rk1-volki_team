@@ -28,7 +28,7 @@ class CFG():
         self.rules = rules_set
         self.terms = self.get_terms(rules_set)
         self.nterms = self.get_nterms(rules_set)
-        self.remove_nterms_that_dont_present_at_left()
+    
         # assert all(map(
         #     lambda x: any(map(lambda y: y.left == x, rules_set)),
         #     self.nterms
@@ -37,6 +37,9 @@ class CFG():
         self.buid_dependency_graph()
         self.clean()
 
+    #извлекает список всех термов из множества правил КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def get_terms(self, rules_set):
         terms_set = set()
         for rule in rules_set:
@@ -48,6 +51,9 @@ class CFG():
         #     print(t)
         return terms_set
 
+    #извлекает список всех гетермов из множества правил КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def get_nterms(self, rules_set):
         nterms_set = set()
         for rule in rules_set:
@@ -62,6 +68,9 @@ class CFG():
     def __repr__(self):
         return '\n'.join(map(str, self.rules))
 
+    #Строит граф зависимостей в КСГ
+    #используется в конструкторе
+    #не изменяет объект
     def buid_dependency_graph(self):
         child_relations = {}
         parent_relations = {}
@@ -85,12 +94,16 @@ class CFG():
 
         return self
 
-    def remove_nterms_that_dont_present_at_left(self):
+
+    #Удаляет из списка правил rules все нетерминалы, 
+    #которых нет ни в одной левой части
+    #не меняет объект
+    def remove_nterms_that_dont_present_at_left(self, rules):
         presenting_nterms = set()
         new_rules = set()
-        for rule in self.rules:
+        for rule in rules:
             presenting_nterms.add(rule.left)
-        for rule in self.rules:
+        for rule in rules:
             new_right = []
             for right in rule.rights:
                 if (isinstance(right, Term) or isinstance(right, Nterm) and right in presenting_nterms):
@@ -98,10 +111,10 @@ class CFG():
             if (len(new_right) == 0):
                 new_right.append(Epsilon())
             new_rules.add(Rule(rule.left, new_right))
-        self.rules = new_rules
+        return new_rules
             
 
-    
+    #Создает новый объект, в правилах которого удалены недостижимые нетермы
     def remove_unreachable_symbols(self):
         new_cfg = deepcopy(self)
         new_cfg._find_unreachable_symbols()
@@ -110,6 +123,8 @@ class CFG():
         new_cfg.nterms = new_cfg.nterms - new_cfg.unreachable
         return new_cfg
 
+    #Создает новый объект, в правилах которого удалены нетермы
+    #которые, которые раскрываются только в eps
     def remove_nullable_symbols(self):
         new_cfg = deepcopy(self)
         new_cfg._find_nullable_symbols()
@@ -121,6 +136,8 @@ class CFG():
         ))
         return new_cfg
 
+    #Удаление eps-правил из грамматики
+    #Создает новый объект
     def remove_epsilon_rules(self):
         new_rules = deepcopy(self.rules)
         new_rules = self.remove_rules_with_only_eps_right(new_rules)
@@ -129,8 +146,15 @@ class CFG():
             new_rules.add(Rule(Nterm("[S]"), [Epsilon()]))
 
         new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules(new_rules))
+        new_rules = self.remove_rules_with_only_eps_right(self.remove_nterms_that_dont_present_at_left(new_rules))
+        if (self.start in self.collapsing):
+            new_rules.add(Rule(Nterm("[S]"), [Epsilon()]))
         return CFG(new_rules)
 
+
+    #Удаляет из списка правил те, у которых в правой части только eps
+    #Возвращает новый список, старый не меняет
+    #Нужна для удаления eps-правил
     def remove_rules_with_only_eps_right(self, rules):
         new_rules = set()
         for rule in rules:
@@ -139,6 +163,9 @@ class CFG():
             new_rules.add(deepcopy(rule))
         return new_rules
 
+    #Генерирует новые правила
+    #Нужная для удаления eps-правил
+    #Не меняет объект
     def _gen_all_possible_combinations_of_rules(self, rules):
         combinations = set()
         for rule in rules:
@@ -148,6 +175,8 @@ class CFG():
                     combinations.add(Rule(rule.left, comb))
         return combinations
 
+    #Нужна для _gen_all_possible_combinations_of_rules
+    #Не меняет объект
     def _gen_right_side_combinations(self, right, current_c, current_i):
         if (current_i == len(right)):
             if (all(map(lambda x: isinstance(x, Epsilon), current_c))):
@@ -159,7 +188,8 @@ class CFG():
         tmp += self._gen_right_side_combinations(right, current_c + [right[current_i]], current_i + 1)
         return tmp
 
-
+    #Ищет нетермы, которые МОГУТ раскрыться в eps
+    #Сохраняет множество таких нетермов в поле объекта collapsing
     def _find_collapsing(self):
         self.collapsing = set()
         flag = True
@@ -179,11 +209,14 @@ class CFG():
                     break
         return self
 
-    #нормальна форма Хомского
+    #Возвращает грамматику в нормальной форме Хомского
+    #Возвращает новый объект, старый не меняет
     def toCNF(self):
         return self.remove_long_rules().remove_epsilon_rules().remove_chain_rules().remove_useless_rules().several_nonterm_removal()
 
 
+    #Удаляет цепные правила из грамматики
+    #Возвращает новый объект
     def remove_chain_rules(self):
         self._find_chain_rules()
         chainrules = self.ChR
@@ -206,6 +239,9 @@ class CFG():
                     rules.add(Rule(Nterm(ch[0]), rights))
         return CFG(rules)
 
+    #Возвращает множество цепных правил
+    #Нужен remove_chain_rules
+    #Сохраняет их в поле объекта ChR
     def _find_chain_rules(self):
         chainrules = []
         for nterm in self.nterms:
@@ -227,9 +263,12 @@ class CFG():
                 break
         self.ChR = chainrules
 
+    #Возвращает новый объект без бесполезных правил
     def remove_useless_rules(self):
         return self.remove_nongenerating_rules().remove_unreachable_symbols()
 
+    #Возвращает новый объект, в котором удалены nonegenerating правила
+    #(nongenerating - непораждающие. Для них в правой части всегда стоит хотя бы один нетерминал)
     def remove_nongenerating_rules(self):
         genetaring_nterm = set()
         for rule in self.rules:
@@ -315,6 +354,7 @@ class CFG():
             new_rules.append(Rule(left, rights_new))
         return CFG(new_rules)       
 
+    #Возвращает новый объект, в котором удалены "длинные правила"
     def remove_long_rules(self):
         new_rules = set()
         for rule in self.rules:
@@ -324,6 +364,8 @@ class CFG():
                 new_rules.add(deepcopy(rule))
         return CFG(new_rules)
 
+    #Возвращает множество правил, в котором "длинные правила" разделены на несколько
+    #Нужна для remove_long_rules
     def _split_long_rule(self, rule):
         new_rules = set()
         current_nterm = deepcopy(rule.left)
@@ -369,6 +411,8 @@ class CFG():
 
         self.Ne = unallocated
 
+
+    #Ищет недостижимые нетермы, и сохраняет их в поле объекта unreachable
     def _find_unreachable_symbols(self):
         self.reachable = set([self.start])
         unallocated = self.nterms.difference(self.reachable)
