@@ -4,6 +4,7 @@ import uuid
 
 
 from rule import Rule, Term, Nterm, Epsilon
+import uuid
 
 
 class Mutually_Recursive_Set():
@@ -231,6 +232,27 @@ class CFG():
             new_rules.append(Rule(left, rights_new))
         return CFG(new_rules)       
 
+    def remove_long_rules(self):
+        new_rules = set()
+        for rule in self.rules:
+            if len(rule.rights) > 2:
+                new_rules = new_rules.union(self._split_long_rule(rule))
+            else:
+                new_rules.add(deepcopy(rule))
+        for r in new_rules:
+            print(r.left, "->", r.rights)
+        return CFG(new_rules)
+
+    def _split_long_rule(self, rule):
+        new_rules = set()
+        current_nterm = deepcopy(rule.left)
+        new_nterm = Nterm("[U" + uuid.uuid4().hex[:3].upper() + "]")
+        for i in range(len(rule.rights) - 2):
+            new_rules.add(Rule(current_nterm, [rule.rights[i], new_nterm]))
+            current_nterm = new_nterm
+            new_nterm = Nterm("[U" + uuid.uuid4().hex[:3].upper() + "]")
+        new_rules.add(Rule(current_nterm, [rule.rights[-2], rule.rights[-1]]))
+        return new_rules
         
     def clean(self):
         # убирает нетерминалы:
