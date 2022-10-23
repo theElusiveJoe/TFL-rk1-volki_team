@@ -300,7 +300,32 @@ class CFG():
             new_rules.append(rule)
         return CFG(new_rules)
 
-    #Саня пусть напишет хз че тут
+    def remove_nonterms_with_singleTerm_transition(self):
+        useless_nterm = {}
+        for nt in self.nterms:
+            useless_nterm[nt.name] = None
+        for rule in self.rules:
+            left = rule.left
+            rights = rule.rights
+            if len(rights) == 1 and isinstance(rights[0], Term) and left.name in useless_nterm.keys() and useless_nterm[left.name] == None:
+                useless_nterm[left.name] = rights[0].symbol
+                continue
+            useless_nterm.pop(left.name, None)
+        
+        new_rules = set()
+        for rule in self.rules:
+            left  = rule.left
+            rights = rule.rights
+            new_rights = []
+            for r in rights:
+                if isinstance(r, Nterm) and r.name in useless_nterm.keys():
+                    new_rights.append(Term(useless_nterm[r.name]))
+                    continue
+                new_rights.append(r)
+            new_rules.add(Rule(left, new_rights))
+        print(useless_nterm)
+        return CFG(new_rules)
+
     def several_nonterm_removal(self):
         def create_unique_str():
             return f"[U{uuid.uuid4().hex[:2].upper()}]" 
