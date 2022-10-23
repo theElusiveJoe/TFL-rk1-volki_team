@@ -7,6 +7,10 @@ from cfg.rule import Rule, Term, Nterm, Epsilon
 import uuid
 
 
+class Decision(Exception):
+    pass
+
+
 class Mutually_Recursive_Set():
     # https://sites.cs.ucsb.edu/~omer/DOWNLOADABLE/cfg-reg09.pdf
     def __init__(self, members):
@@ -58,7 +62,7 @@ class CFG():
             .remove_nonterms_with_single_term_transition()\
             .remove_unreachable_symbols() \
             .remove_trivial_nterms() \
-            .remove_unreachable_symbols()    
+            .remove_unreachable_symbols()
 
     # извлекает список всех термов из множества правил КСГ
     # используется в конструкторе
@@ -159,14 +163,13 @@ class CFG():
 
             if new_upow == upow:
                 break
-            
+
         new_rules = set(filter(
             lambda x: x.left in reachable,
             self.rules
         ))
 
         return CFG(new_rules)
-
 
     # Создает новый объект, в правилах которого удалены нетермы
     # # которые, которые раскрываются только в eps
@@ -184,6 +187,7 @@ class CFG():
 
     # Удаление eps-правил из грамматики
     # Создает новый объект
+
     def remove_epsilon_rules(self):
         new_rules = deepcopy(self.rules)
         new_rules = self.remove_rules_with_only_eps_right(new_rules)
@@ -320,8 +324,6 @@ class CFG():
         print(self)
         return self.remove_nongenerating_rules().remove_unreachable_symbols()
 
-    
-
     def remove_nonterms_with_single_term_transition(self):
         useless_nterm = {}
         for nt in self.nterms:
@@ -399,7 +401,6 @@ class CFG():
             new_nterm = Nterm("[U" + uuid.uuid4().hex[:3].upper() + "]")
         new_rules.add(Rule(current_nterm, [rule.rights[-2], rule.rights[-1]]))
         return new_rules
-
 
     def remove_trivial_nterms(self):
         def clean_rules(rules):
@@ -595,7 +596,7 @@ class CFG():
         self.build_mureses()
         # # print()('muresES:')
         # for murese in self.mureses:
-            # print()(murese.members)
+        # print()(murese.members)
         # # print()('TRYING TO COLOR muresES')
         return all(map(lambda x: self.check_murese_on_monocromatic_cycles(x), self.mureses))
 
@@ -661,6 +662,9 @@ class CFG():
             return self.check_linear_split(self.start)
         except AssertionError:
             return False
+        except Decision:
+            return True
+        return False
 
     def check_linear_split(self, first_cycled_nterm):
         # print()('----------------------------------')
@@ -723,19 +727,32 @@ class CFG():
         for i in range(0, len(left_string)):
             for j in range(len(mid_string)):
                 if left_string[len(left_string) - i:] + mid_string[:j] not in mid_string+right_string:
-                    print()('suitable for task 2: IRREGULAR')
+                    # print('suitable for task 2: IRREGULAR')
+                    raise Decision()
 
         for i in range(0, len(right_string)):
             for j in range(len(mid_string)):
                 if mid_string[len(mid_string) - j:] + right_string[:i] not in left_string+mid_string:
-                    print()('suitable for task 2: IRREGULAR')
+                    # print('suitable for task 2: IRREGULAR')
+                    raise Decision()
 
         return mid_string
 
     def transit_to_next_node(self, rule):
-        self.build_mureses()
-        # # print()('muresES:')
-        # for murese in self.mureses:
-            # print()(murese.members)
-        # # print()('TRYING TO COLOR muresES')
-        return all(map(lambda x: self.check_murese_on_monocromatic_cycles(x), self.mureses))
+        # по правилу мы должны куда-то переместиться
+        # убедимся, что справа максимум один нетерминал
+        # вернем то, что нарастетслева и справа при переходе + минимум того, что раскроется в середине
+        # print('TRANSITTING', rule)
+        assert (len(list(filter(lambda x: isinstance(x, Nterm), rule.rights)))) <= 1
+        rights = rule.rights
+        i = 0
+        # попробуем найти этот нетерминал
+        while i < len(rights):
+            if isinstance(rights[i], Nterm):
+                # нашли этот нетерминал, значит прогуляемся по нему
+                mid_string = self.check_linear_split(rights[i])
+                return ''.join(map(str, rights[:i])) + mid_string + ''.join(map(str, rights[i+1:]))
+            i += 1
+        else:
+            # если это конечный узел, возвращаем его термы
+            return ''.join(map(str, rights))
