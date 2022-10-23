@@ -1,6 +1,6 @@
 import re
-from cfg.cfg import CFG
-from cfg.rule import Term, Nterm, Rule, Epsilon
+from cfg import CFG
+from rule import Term, Nterm, Rule, Epsilon
 
 
 class CFG_Parser():
