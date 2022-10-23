@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import combinations
 
 from rule import Rule, Term, Nterm, Epsilon
 
@@ -63,6 +64,84 @@ class CFG():
 
         return self
 
+    def remove_unreachable_symbols(self):
+        new_cfg = deepcopy(self)
+        new_cfg._find_unreachable_symbols()
+        new_cfg.rules = set(
+        filter(lambda x: x.left not in new_cfg.unreachable, new_cfg.rules))
+        new_cfg.nterms = new_cfg.nterms - new_cfg.unreachable
+        return new_cfg
+
+    def remove_nullable_symbols(self):
+        new_cfg = deepcopy(self)
+        new_cfg._find_nullable_symbols()
+        new_cfg.rules = set(filter(lambda x: x.left not in new_cfg.Ne, new_cfg.rules))
+        new_cfg.rules = set(map(
+            lambda x: Rule(x.left, list(
+                map(lambda y: y if y not in new_cfg.Ne else Epsilon(), x.rights))),
+            new_cfg.rules
+        ))
+        return new_cfg
+
+    def remove_epsilon_rules(self):
+        new_rules = deepcopy(self.rules)
+        new_rules = self.remove_rules_with_only_eps_right(new_rules)
+        self._find_collapsing()
+        if (self.start in self.collapsing):
+            new_rules.add(Rule(Term("[S]"), [Epsilon()]))
+
+        new_rules = new_rules.union(self._gen_all_possible_combinations_of_rules())
+        return CFG(new_rules)
+
+    def remove_rules_with_only_eps_right(self, rules):
+        new_rules = set()
+        for rule in rules:
+            if (len(rule.rights) == 1 and isinstance(rule.rights[0], Epsilon)):
+                continue
+            new_rules.add(rule)
+        return new_rules
+
+    def _gen_all_possible_combinations_of_rules(self):
+        combinations = set()
+        for rule in self.rules:
+            right_comb = self._gen_right_side_combinations(rule.rights, [], 0)
+            for comb in right_comb:
+                combinations.add(Rule(rule.left, comb))
+        return combinations
+
+    def _gen_right_side_combinations(self, right, current_c, current_i):
+        if (current_i == len(right)):
+            if (all(map(lambda x: isinstance(x, Epsilon), current_c))):
+                return []
+            return [current_c]
+        tmp = []
+        if (right[current_i] in self.collapsing):
+            tmp += self._gen_right_side_combinations(right, current_c + [Epsilon()], current_i + 1)
+        tmp += self._gen_right_side_combinations(right, current_c + [right[current_i]], current_i + 1)
+        return tmp
+
+
+    def _find_collapsing(self):
+        self.collapsing = set()
+        flag = True
+        tmp = deepcopy(self.rules)
+        while flag:
+            flag = False
+            for rule in tmp:
+                if (len(rule.rights) == 1 and isinstance(rule.rights[0], Epsilon)):
+                    flag = True
+                    self.collapsing.add(rule.left)
+                    tmp.remove(rule)
+                    break
+                if all(map(lambda x: isinstance(x, Nterm), rule.rights)) and all(map(lambda x: x in self.collapsing, rule.rights)):
+                    self.collapsing.add(rule.left)
+                    flag = True
+                    tmp.remove(rule)
+                    break
+        return self
+
+
+        
     def clean(self):
         # убирает нетерминалы:
         # 0. ни во что не раскрывающиеся
@@ -71,20 +150,7 @@ class CFG():
         # 3. недостижимые
         print('cleaning')
 
-        self._find_unreachable_symbols()
-        self.rules = set(
-            filter(lambda x: x.left not in self.unreachable, self.rules))
-        self.nterms = self.nterms - self.unreachable
-
-        self._find_nullable_symbols()
-        self.rules = set(filter(lambda x: x.left not in self.Ne, self.rules))
-        self.rules = set(map(
-            lambda x: Rule(x.left, list(
-                map(lambda y: y if y not in self.Ne else Epsilon(), x.rights))),
-            self.rules
-        ))
-
-        self.buid_dependency_graph()
+        return self.remove_unreachable_symbols().remove_nullable_symbols().buid_dependency_graph()
 
     def _find_nullable_symbols(self):
         self.generative = set()
@@ -128,6 +194,7 @@ class CFG():
                 break
 
         self.unreachable = unallocated
+
 
     def is_suitable_for_task_2(self):
         return all(
