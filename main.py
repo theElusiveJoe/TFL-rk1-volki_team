@@ -7,7 +7,6 @@ def check_1(grammar):
     return g1.check_task_1()
 
 def check_2(grammar):
-    pass
     grammar.clean()
     return grammar.check_task_2()
 
@@ -21,12 +20,6 @@ def main():
     
 
 
-    # grammar = CFG_Parser(test).parse_rules()
-    # print(grammar)
-    # grammar = grammar.clean()
-    # print(grammar)
-    # return
-
     try:
         grammar = CFG_Parser(test).parse_rules()
     except Exception as e:
@@ -35,7 +28,7 @@ def main():
         print('SYNTAX ERROR')
     else:
         # print(grammar)
-        if check_1(grammar):
+        if len(grammar.terms)==1 or check_1(grammar):
             output_file.write('regular')   
             print('REGULAR')
             return 
@@ -50,3 +43,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Учился студент на ИУ9, увидел хакатон по ТФЯ, записался на него и выгорел за 3 дня
