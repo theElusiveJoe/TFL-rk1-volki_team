@@ -33,7 +33,7 @@ c = c.remove_chain_rules().remove_unreachable_symbols()
 print("---------------")
 for i in c.rules:
     print(i.left, i.rights)
-c = c.remove_nonterms_with_singleTerm_transition()
+c = c.remove_nonterms_with_term_transition()
 print("--------------")
 for i in c.rules:
     print(i.left, i.rights)

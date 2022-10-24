@@ -349,6 +349,52 @@ class CFG():
             new_rules.add(Rule(left, new_rights))
         # print()(useless_nterm)
         return CFG(new_rules)
+    
+    def remove_nonterms_with_term_transition(self):
+        useless_nterm = {}
+        unused_nterms = set()
+        for nt in self.nterms:
+            useless_nterm[nt.name] = None
+            unused_nterms.add(nt.name)
+        
+        k = 0
+        rules = deepcopy(self.rules)
+        while True:
+            new_rules = set()
+            n = k
+            for rule in rules:
+                left = rule.left
+                rights = rule.rights
+                if all(map(lambda x : isinstance(x, Term), rights)) and left.name in useless_nterm.keys() and useless_nterm[left.name] == None:
+                    useless_nterm[left.name] = rights
+                    unused_nterms.remove(left.name)
+                    continue
+                useless_nterm.pop(left.name, None)
+
+            
+            for rule in rules:
+                left = rule.left
+                rights = rule.rights
+                new_rights = []
+                for r in rights:
+                    if isinstance(r, Nterm) and r.name in useless_nterm.keys():
+                        new_rights.extend(useless_nterm[r.name])
+                        n += 1
+                        continue
+                    new_rights.append(r)
+                new_rules.add(Rule(left, new_rights))
+            print(n)
+            if n == k:
+                break
+            rules = deepcopy(new_rules)
+            k = n
+            for nt in self.nterms:
+                if nt.name in unused_nterms:
+                    useless_nterm[nt.name] = None
+                else:
+                    useless_nterm.pop(nt.name, None)
+        # print()(useless_nterm)
+        return CFG(new_rules)
 
     def several_nonterm_removal(self):
         def create_unique_str():
