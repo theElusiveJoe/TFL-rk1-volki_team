@@ -4,7 +4,8 @@ from cfg.rule import Term, Nterm, Rule, Epsilon
 
 
 class CFG_Parser():
-    def __init__(self, string):
+    def __init__(self, strings):
+        string = ''.join(filter(lambda x: not x.startswith('#'), strings))
         self.string = ''.join(filter(lambda x: not str.isspace(x), string))
 
     def glance(self):

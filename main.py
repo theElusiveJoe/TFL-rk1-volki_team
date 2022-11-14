@@ -14,14 +14,9 @@ def main():
     input_file = open("test.CFG", "r")
     output_file = open("result", "w")
 
-    test = ""
-    for line in input_file.readlines():
-        test += line
-    
-
 
     try:
-        grammar = CFG_Parser(test).parse_rules()
+        grammar = CFG_Parser(input_file.readlines()).parse_rules()
     except Exception as e:
         print(e)
         output_file.write('syntax error') 

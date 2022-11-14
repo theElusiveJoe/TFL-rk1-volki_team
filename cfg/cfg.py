@@ -3,8 +3,9 @@ import networkx as nx
 import uuid
 
 
+from cfg.mures2 import Mures
 from cfg.rule import Rule, Term, Nterm, Epsilon
-import uuid
+from cfg.fa import FA
 
 
 class Decision(Exception):
@@ -93,7 +94,7 @@ class CFG():
         return nterms_set
 
     def __repr__(self):
-        return '\n'.join(map(str, self.rules))
+        return '#################\n' + '#   GRAMMAR:\n#   ' + '\n#   '.join(map(str, self.rules)) + '\n#################'
 
     # Строит граф зависимостей в КСГ
     # используется в конструкторе
@@ -141,7 +142,6 @@ class CFG():
         return new_rules
 
     # Создает новый объект, в правилах которого удалены недостижимые нетермы
-
     def remove_unreachable_symbols(self):
         # скажем, что стартовый символ достижим
         self.reachable = set([self.start])
@@ -170,20 +170,6 @@ class CFG():
         ))
 
         return CFG(new_rules)
-
-    # Создает новый объект, в правилах которого удалены нетермы
-    # # которые, которые раскрываются только в eps
-    # def remove_nullable_symbols(self):
-    #     new_cfg = deepcopy(self)
-    #     new_cfg._find_nullable_symbols()
-    #     new_cfg.rules = set(
-    #         filter(lambda x: x.left not in new_cfg.Ne, new_cfg.rules))
-    #     new_cfg.rules = set(map(
-    #         lambda x: Rule(x.left, list(
-    #             map(lambda y: y if y not in new_cfg.Ne else Epsilon(), x.rights))),
-    #         new_cfg.rules
-    #     ))
-    #     return new_cfg
 
     # Удаление eps-правил из грамматики
     # Создает новый объект
@@ -215,19 +201,6 @@ class CFG():
             new_rules.add(deepcopy(rule))
         return new_rules
 
-    # Генерирует новые правила
-    # Нужная для удаления eps-правил
-    # Не меняет объект
-    def _gen_all_possible_combinations_of_rules(self, rules):
-        combinations = set()
-        for rule in rules:
-            if any(map(lambda x: x in self.collapsing, rule.rights)):
-                right_comb = self._gen_right_side_combinations(
-                    rule.rights, [], 0)
-                for comb in right_comb:
-                    combinations.add(Rule(rule.left, comb))
-        return combinations
-
     # Нужна для _gen_all_possible_combinations_of_rules
     # Не меняет объект
     def _gen_right_side_combinations(self, right, current_c, current_i):
@@ -242,6 +215,19 @@ class CFG():
         tmp += self._gen_right_side_combinations(
             right, current_c + [right[current_i]], current_i + 1)
         return tmp
+
+    # Генерирует новые правила
+    # Нужная для удаления eps-правил
+    # Не меняет объект
+    def _gen_all_possible_combinations_of_rules(self, rules):
+        combinations = set()
+        for rule in rules:
+            if any(map(lambda x: x in self.collapsing, rule.rights)):
+                right_comb = self._gen_right_side_combinations(
+                    rule.rights, [], 0)
+                for comb in right_comb:
+                    combinations.add(Rule(rule.left, comb))
+        return combinations
 
     # Ищет нетермы, которые МОГУТ раскрыться в eps
     # Сохраняет множество таких нетермов в поле объекта collapsing
@@ -267,7 +253,24 @@ class CFG():
     # Возвращает грамматику в нормальной форме Хомского
     # Возвращает новый объект, старый не меняет
     def toCNF(self):
-        return self.remove_long_rules().remove_epsilon_rules().remove_chain_rules().remove_useless_rules().several_nonterm_removal()
+        # grammar = self.remove_long_rules()
+        # print(grammar.terms)
+        # grammar = grammar.remove_epsilon_rules()
+        # print(grammar.terms)
+        # grammar = grammar.remove_chain_rules()
+        # print(grammar.terms)
+
+        # grammar = grammar.remove_useless_rules()
+        # print(grammar.terms)
+        # grammar = grammar.several_nonterm_removal()
+        # print(grammar.terms)
+        # return grammar
+
+        return self.remove_long_rules() \
+            .remove_epsilon_rules() \
+            .remove_chain_rules() \
+            .remove_useless_rules() \
+            .several_nonterm_removal() \
 
     # Удаляет цепные правила из грамматики
     # Возвращает новый объект
@@ -320,8 +323,6 @@ class CFG():
 
     # Возвращает новый объект без бесполезных правил
     def remove_useless_rules(self):
-        print("IN REMOVE USELESS")
-        print(self)
         return self.remove_nongenerating_rules().remove_unreachable_symbols()
 
     def remove_nonterms_with_single_term_transition(self):
@@ -349,14 +350,14 @@ class CFG():
             new_rules.add(Rule(left, new_rights))
         # print()(useless_nterm)
         return CFG(new_rules)
-    
+
     def remove_nonterms_with_term_transition(self):
         useless_nterm = {}
         unused_nterms = set()
         for nt in self.nterms:
             useless_nterm[nt.name] = None
             unused_nterms.add(nt.name)
-        
+
         k = 0
         rules = deepcopy(self.rules)
         while True:
@@ -365,13 +366,12 @@ class CFG():
             for rule in rules:
                 left = rule.left
                 rights = rule.rights
-                if all(map(lambda x : isinstance(x, Term), rights)) and left.name in useless_nterm.keys() and useless_nterm[left.name] == None:
+                if all(map(lambda x: isinstance(x, Term), rights)) and left.name in useless_nterm.keys() and useless_nterm[left.name] == None:
                     useless_nterm[left.name] = rights
                     unused_nterms.remove(left.name)
                     continue
                 useless_nterm.pop(left.name, None)
 
-            
             for rule in rules:
                 left = rule.left
                 rights = rule.rights
@@ -535,44 +535,6 @@ class CFG():
             new_rules.append(rule)
         return CFG(new_rules)
 
-    # def remove_nongenerating_rules(self):
-    #     generating_nterms = set()
-    #     # для начала, наберем все нетерминалы, которые явно могут завершиться (раскрыться только в буквы)
-    #     for rule in self.rules:
-    #         if all(map(lambda x: isinstance(x, Term),  rule.rights)):
-    #             generating_nterms.add(rule.left.name)
-    #     # print()('THEY ARE GENERATING', generating_nterms)
-    #     # теперь будем набирать нетерминалы, которые способны переписаться в комбинацию терминалов и завершающихся терминалов
-    #     while True:
-    #         # print()(generating_nterms)
-    #         # фиксируем количество до нового набора
-    #         upow = len(generating_nterms)
-
-    #         # снова бегаем по всем правилам
-    #         for rule in self.rules:
-    #             flag = True
-    #             # если в правой части только нетерминалы, или завершающиеся
-    #             if all(map(lambda x: isinstance(x, Term) or x in generating_nterms, rule.rights)):
-    #                 generating_nterms.add(rule.left.name)
-
-    #         # фиксируем количество после нового набора
-    #         new_upow = len(generating_nterms)
-    #         # если ничего нового, то прекращаем
-    #         if upow == new_upow:
-    #             break
-
-    #     # теперь у нас есть множество завершающихся нетерминалов
-
-    #     # возможно, это можно было делать по ходу, но уже лень проверять
-    #     # назовем это "теоритической конструкцией"
-    #     new_rules = set(filter(
-    #         lambda x: x.left in generating_nterms and all(
-    #             map(lambda y: isinstance(y, Term) or y in generating_nterms, x.rights)),
-    #         self.rules
-    #     ))
-
-    #     return CFG(new_rules)
-
     def remove_unreachable_symbols(self):
         # скажем, что стартовый символ достижим
         self.reachable = set([self.start])
@@ -704,6 +666,8 @@ class CFG():
         # 2. если в исходной грамматике 1. не соблюден, то до применения метода все незацикленные нетерминалы должны развернуться в терминалы
         # 3. из любого muresa не более одного выхода
         self.build_mureses()
+        print(self)
+        print(self.mureses)
         try:
             return self.check_linear_split(self.start)
         except AssertionError:
@@ -802,3 +766,126 @@ class CFG():
         else:
             # если это конечный узел, возвращаем его термы
             return ''.join(map(str, rights))
+
+    # ЛАБА 3
+
+    def check_lab_3(self):
+        # предварительная подготовка
+        self.prepare_to_lab_3()
+
+        print('\nВИДЫ НТЕРМОВ В ГРАММАТИКЕ:')
+        print('циклические:', self.nodes_in_mureses)
+        print('транзитные:', self.transit_nodes)
+        print('конечные:', self.finite_nodes)
+
+        # проверим, что подходит под наши ограничения
+        if not self.is_suitable_for_lab_3():
+            return False
+
+        return True
+        # for m in self.mureses2:
+        #     print()
+        #     print(m)
+        #     m.check_idempotence()
+
+
+    def prepare_to_lab_3(self):
+        def get_nodes_in_mureses(self):
+            g = nx.DiGraph(self.child_relations)
+            cycles = nx.simple_cycles(g)
+            nodes_in_mureses = set()
+            for cycle in cycles:
+                nodes_in_mureses.update(cycle)
+            return nodes_in_mureses
+
+        def get_transit_nodes(self):
+            transit_nodes = set()
+            while True:
+                for node in self.nterms:
+                    if node in self.nodes_in_mureses or node in transit_nodes:
+                        continue
+                    if any(map(lambda x: x in transit_nodes or x in self.nodes_in_mureses, self.child_relations[node])):
+                        transit_nodes.add(node)
+                        break
+                else:
+                    break
+            return transit_nodes
+
+        def get_finite_nodes(self):
+            return self.nterms - (self.transit_nodes | self.nodes_in_mureses)
+
+        # все ноды разделим на 3 множества
+        self.nodes_in_mureses = get_nodes_in_mureses(self)
+        self.transit_nodes = get_transit_nodes(self)
+        self.finite_nodes = get_finite_nodes(self)
+
+        #  построим мюресы
+        self.build_mureses_2()
+
+    def build_mureses_2(self):
+        g = nx.DiGraph(self.child_relations)
+        cycles = list(map(set, nx.simple_cycles(g)))
+
+        while True:
+            cycles = list(filter(bool, cycles))
+            cycles_copy = deepcopy(cycles)
+
+            for i, x in enumerate(cycles_copy):
+                for j, y in enumerate(cycles_copy):
+                    if x == y:
+                        continue
+                    if x & y:
+                        cycles[i] = x | y
+                        cycles[j] = set()
+                        break
+            else:
+                break
+
+        self.mureses2 = set()
+        for cycle in cycles:
+            self.mureses2.add(Mures(self, cycle))
+
+    def find_mures_by_node(self, node):
+        return list(filter(lambda x: node in x, self.mureses2))[0]
+
+    def is_suitable_for_lab_3(self):
+        for rule in self.rules:
+            if rule.left not in self.nodes_in_mureses:
+                continue
+            if len(rule.rights) == 1:
+                continue
+
+            the_mures = self.find_mures_by_node(rule.left)
+
+            a, b = rule.rights
+            if (a in the_mures and b not in self.finite_nodes) or (b in the_mures and a not in self.finite_nodes):
+                return False
+
+        return True
+
+    def build_fa_for_appendix(self, node):
+        assert node in self.finite_nodes
+        trs_rules = list(filter(lambda x: x.left == node, self.rules))
+
+        fa = FA()
+
+        for rule in trs_rules:
+            if len(rule.rights) == 1:
+                fa.add_transit(
+                    fa.start_node, fa.finish_node, rule.rights[0].symbol
+                )
+            else:
+                fa1 = self.build_fa_for_appendix(rule.rights[0])
+                fa2 = self.build_fa_for_appendix(rule.rights[1])
+                fa_sum = fa1.concat(fa2)
+                fa.insert(fa_sum)
+
+        return fa
+
+    # def build_regular_approximation(self, node=None):
+    #     if not node:
+    #         return self.build_regular_approximation(self.start)
+
+    #     if node in self.nodes_in_mureses:
+    #         the_mures = self.find_mures_by_node(node)
+    #         return
