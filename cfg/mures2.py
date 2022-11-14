@@ -1,6 +1,8 @@
 from cfg.rule import *
 from cfg.fa import FA
 from cfg.tools import *
+from random import choice
+
 
 class Mures:
     def __init__(self, grammar, members):
@@ -35,7 +37,7 @@ class Mures:
                     'rules:', *list(map(lambda x: '    ' +
                                     str(x), self.internal_rules)),
                     'escapes:', *list(map(lambda x: '    ' +
-                                    str(x), self.escape_rules))
+                                          str(x), self.escape_rules))
                 ]))
             + nl
             + '#'*10
@@ -45,7 +47,7 @@ class Mures:
         return o in self.members or o in self.internal_rules or o in self.escape_rules
 
     def check_idempotence(self):
-        
+
         self.left_rules = set()
         self.right_rules = set()
         for rule in self.internal_rules:
@@ -60,31 +62,61 @@ class Mures:
         print('нарастает слева:', self.left_rules)
         print('нарастает справа;', self.right_rules)
 
-        left_fa = self.build_left_fa()
+        left_fa = self.build_left_fa(list(self.members)[0])
         print(left_fa)
+        right_fa = self.build_right_fa(list(self.members)[0])
+        print(right_fa)
 
-    def build_left_fa(self):
+        # left_fa.to_dot('many_graphs.dot')
+        right_fa.to_dot('many_graphs.dot')
+
+
+    def build_left_fa(self, with_respect_node:str):
         print('\n\nBUILDING LEFT FA:')
+        with_respect_node = str(with_respect_node)
         fa = FA()
         fa.add_nodes(self.members)
+
+        fa.add_transit(fa.start_node, with_respect_node, '')
+
         for rule in self.left_rules:
             if len(rule.rights) == 1:
-                fa.add_transit(rule.left.name, rule.rights[0].name, '')
+                fa.add_transit(
+                    rule.left.name,
+                    rule.rights[0].name if rule.rights[0].name != with_respect_node else fa.finish_node,
+                    '')
             else:
-                appendix_fa = self.grammar.build_fa_for_appendix(rule.rights[0])
-                fa.insert(appendix_fa, insert_start=rule.left.name, insert_end = rule.rights[1].name)
+                appendix_fa = self.grammar.build_fa_for_appendix(
+                    rule.rights[0].name)
+                fa.insert(
+                    appendix_fa,
+                    insert_start=rule.left.name,
+                    insert_end=rule.rights[1]
+                )
 
         return fa
-    
-    def build_right_fa(self):
+
+    def build_right_fa(self, with_respect_node:str):
         print('\n\nBUILDING RIGHT FA:')
+        with_respect_node = str(with_respect_node)
         fa = FA()
         fa.add_nodes(self.members)
+
+        fa.add_transit(fa.start_node, with_respect_node, '')
+
         for rule in self.right_rules:
             if len(rule.rights) == 1:
-                fa.add_transit(rule.left.name, rule.rights[0].name, '')
+                fa.add_transit(
+                    rule.rights[0].name ,
+                    rule.left.name if rule.left.name != with_respect_node else fa.finish_node,
+                    '')
             else:
-                appendix_fa = self.grammar.build_fa_for_appendix(rule.rights[0])
-                fa.insert(appendix_fa, insert_start=rule.left.name, insert_end = rule.rights[1].name)
+                appendix_fa = self.grammar.build_fa_for_appendix(
+                    rule.rights[1].name)
+                fa.insert(
+                    appendix_fa,
+                    insert_end=rule.left.name if rule.left.name!=with_respect_node else fa.finish_node,
+                    insert_start=rule.rights[0]
+                )
 
         return fa

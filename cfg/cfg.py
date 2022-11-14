@@ -845,7 +845,7 @@ class CFG():
         for cycle in cycles:
             self.mureses2.add(Mures(self, cycle))
 
-    def find_mures_by_node(self, node):
+    def find_mures_by_node(self, node:Nterm):
         return list(filter(lambda x: node in x, self.mureses2))[0]
 
     def is_suitable_for_lab_3(self):
@@ -863,9 +863,12 @@ class CFG():
 
         return True
 
-    def build_fa_for_appendix(self, node):
-        assert node in self.finite_nodes
-        trs_rules = list(filter(lambda x: x.left == node, self.rules))
+    def build_fa_for_appendix(self, node:str):
+        # print('NodE:', node, type(node))
+        # print(list(map(type, self.finite_nodes)))
+        assert node in set(map(str, self.finite_nodes))
+        trs_rules = list(filter(lambda x: str(x.left) == node, self.rules))
+        print('in appendix trs', trs_rules)
 
         fa = FA()
 

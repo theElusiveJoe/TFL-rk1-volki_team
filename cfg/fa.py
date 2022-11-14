@@ -1,6 +1,7 @@
 import uuid
 import json
 from cfg.tools import *
+import graphviz
 
 
 class FA:
@@ -44,10 +45,29 @@ class FA:
         }
         return json.dumps(ret, indent=indent)
 
-    def add_nodes(self, l):
+    def to_dot(self, filename):
+        dot = graphviz.Digraph()
+        for transit in self.transits:
+            dot.node(transit[0], label= 'start' if transit[0] == self.start_node else ('finish' if transit[0] == self.finish_node else transit[0]))
+            dot.node(transit[1], label= 'start' if transit[1] == self.start_node else ('finish' if transit[1] == self.finish_node else transit[1]))
+            dot.edge(transit[0], transit[1], transit[2])
+        dot.render(f'doctest-output/{gen_unique_node()}', format='svg')
+        nl = '\n'
+        with open(filename, 'a') as f:
+            f.write('digraph graphname {' + nl)
+            for transit in self.transits:
+                f.write(
+                    f'"{transit[0]}" -> "{transit[1]}" [label = "{transit[2]}"] {nl}'
+                )
+            f.write('}')
+
+    def add_nodes(self, l:str):
         self.nodes.update(list(map(str, l)))
 
-    def add_transit(self, src, dst, char):
+    def add_transit(self, src:str, dst:str, char:str):
+        src = str(src)
+        dst = str(dst)
+        # print('->assert<- add_transit', type(src), type(dst), src, dst, self.nodes, set(map(type, self.nodes)))
         assert src in self.nodes and dst in self.nodes
 
         self.transits.add(
