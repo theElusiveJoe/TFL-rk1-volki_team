@@ -892,3 +892,22 @@ class CFG():
     #     if node in self.nodes_in_mureses:
     #         the_mures = self.find_mures_by_node(node)
     #         return
+
+    # ТЖЕ ЛАБА 3 НО АППРОКСИМАЦИЯ
+
+    def MN_transformation(self):
+        self.build_mureses_2()
+
+        new_rules = set()
+        old_rules = set()
+
+        for mures in self.mureses2:
+            newr, oldr = mures.MN_transformation()
+            new_rules = new_rules | newr
+            old_rules = old_rules | oldr
+
+        rules = (self.rules - old_rules) | new_rules
+        print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
+        for x in rules:
+            print('   ', x)    
+        return CFG(rules).clean()
