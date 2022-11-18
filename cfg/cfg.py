@@ -1,6 +1,7 @@
 from copy import deepcopy
 import networkx as nx
 import uuid
+import json
 
 
 from cfg.mures2 import Mures
@@ -29,7 +30,7 @@ class Mutually_Recursive_Set():
 
 class CFG():
     def __init__(self, rules_set):
-        self.rules = rules_set
+        self.rules = set(rules_set)
         self.terms = self.get_terms(rules_set)
         self.nterms = self.get_nterms(rules_set)
 
@@ -788,7 +789,6 @@ class CFG():
         #     print(m)
         #     m.check_idempotence()
 
-
     def prepare_to_lab_3(self):
         def get_nodes_in_mureses(self):
             g = nx.DiGraph(self.child_relations)
@@ -845,7 +845,7 @@ class CFG():
         for cycle in cycles:
             self.mureses2.add(Mures(self, cycle))
 
-    def find_mures_by_node(self, node:Nterm):
+    def find_mures_by_node(self, node: Nterm):
         return list(filter(lambda x: node in x, self.mureses2))[0]
 
     def is_suitable_for_lab_3(self):
@@ -863,7 +863,7 @@ class CFG():
 
         return True
 
-    def build_fa_for_appendix(self, node:str):
+    def build_fa_for_appendix(self, node: str):
         # print('NodE:', node, type(node))
         # print(list(map(type, self.finite_nodes)))
         assert node in set(map(str, self.finite_nodes))
@@ -907,7 +907,37 @@ class CFG():
             old_rules = old_rules | oldr
 
         rules = (self.rules - old_rules) | new_rules
-        print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
-        for x in rules:
-            print('   ', x)    
+        # print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
+        # for x in rules:
+        #     print('   ', x)
         return CFG(rules).clean()
+
+    def remove_all_right_productions(self, debug=False):
+        self.build_mureses_2()
+
+        new_rules = set()
+        old_rules = set()
+
+        for mures in self.mureses2:
+            newr, oldr, appendixes = mures.remove_all_right_productions()
+            new_rules = new_rules | newr
+            old_rules = old_rules | oldr
+
+        rules = (self.rules - old_rules) | new_rules
+
+        if debug:
+            print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
+            groups = {'': list()}
+            for a in appendixes:
+                groups[a] = list()
+            for rule in rules:
+                s = str(rule.left)
+                s2 = str(rule)
+                if '_' not in s:
+                    groups[''].append(s2)
+                else:
+                    a = '_' + s.split('_')[-1][:-1]
+                    groups[a].append(s2)
+            print(json.dumps(groups, indent=4))
+
+        return CFG(rules)

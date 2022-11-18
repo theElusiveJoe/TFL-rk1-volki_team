@@ -20,7 +20,7 @@ class Mures:
                 and
                 len(list(filter(lambda x: x in members, r.rights))) == 0,
             grammar.rules))
-
+        self.i = 1
     def __repr__(self):
         nl = '\n'
         # members = f'members: {" ".join(map(str, self.members))}'
@@ -120,16 +120,18 @@ class Mures:
 
         return fa
 
+    @staticmethod
+    def get_streak(a):
+        return Nterm(a.name[:-1] + "'" + ']')
+
     def MN_transformation(self):
-        def get_streak(a):
-            return Nterm(a.name[:-1] + "'" + ']')
 
         new_rules = set()
         old_rules = set()
 
         # 1
         for a in self.members:
-            nr = Rule(get_streak(a), [Epsilon()])
+            nr = Rule(self.get_streak(a), [Epsilon()])
             new_rules.add(nr)
 
         # 2
@@ -139,10 +141,8 @@ class Mures:
             left = rule.left
             rights = rule.rights
 
-            print('RULE', rule)
             if not any(map(lambda x: x in self.members, rights)):
-                nr = Rule(left, rights + [get_streak(left)])
-                print('->', nr)
+                nr = Rule(left, rights + [self.get_streak(left)])
                 new_rules.add(nr)
             else:
                 indexes = []
@@ -152,7 +152,7 @@ class Mures:
 
                 bethas = [rights[i] for i in indexes]
                 alphas = [rights[i:j]
-                          for i, j in  zip([0] + list(map(lambda x: x + 1, indexes)), indexes + [len(rights)])]
+                          for i, j in zip([0] + list(map(lambda x: x + 1, indexes)), indexes + [len(rights)])]
                 alphas = list(map(lambda x: x if x != []
                               else [Epsilon()], alphas))
                 bethas = [None] + bethas
@@ -165,15 +165,77 @@ class Mures:
 
                 for i in range(1, len(bethas)-1):
                     nr = Rule(
-                        get_streak(bethas[i]),
+                        self.get_streak(bethas[i]),
                         alphas[i] + [bethas[i+1]]
                     )
                     new_rules.add(nr)
 
                 nr = Rule(
-                    get_streak(bethas[-1]),
-                    alphas[-1] + [get_streak(left)]
+                    self.get_streak(bethas[-1]),
+                    alphas[-1] + [self.get_streak(left)]
                 )
                 new_rules.add(nr)
 
         return new_rules, old_rules
+
+    def renamer(self, a, adding_name, scope):
+        if isinstance(a, Term) or a not in scope:
+            return a
+        else:
+            return Nterm(a.name[:-1] + adding_name + ']')
+
+    def get_fresh_renamed_copy_of_mn_transformation(self, name_appendix):
+        def rename_rule(rule, adding_name, scope):
+            return Rule(
+                self.renamer(rule.left, adding_name, scope),
+                list(map(lambda x: self.renamer(x, adding_name, scope), rule.rights))
+            )
+        new_rules, _ = self.MN_transformation()
+
+        extended_members = self.members | set(map(self.get_streak, self.members))
+        new_rules = set(
+            map(lambda x: rename_rule(x, name_appendix, extended_members), new_rules))
+
+        return new_rules
+
+    i = 1
+
+    def remove_all_right_productions(self):
+        def collect_all_right_relations():
+            pairs = set()
+            for rule in self.internal_rules:
+                if len(rule.rights) == 2 and rule.rights[1] in self.members:
+                    pairs.add(
+                        (rule.left, rule.rights[1])
+                    )
+
+            return pairs
+
+        pairs_to_remove = collect_all_right_relations()
+
+        f,c,r,a = set(), set(), set(), set()
+
+        for pair in pairs_to_remove:
+            rules_to_replace = set(filter(lambda x: len(
+                x.rights) == 2 and x.rights[1] == pair[1], self.internal_rules))
+
+            # name_appendix = '_' + uuid.uuid4().hex[:3].upper()
+            name_appendix = f'_group{self.i}'
+            self.i+=1
+            fresh_rules = self.get_fresh_renamed_copy_of_mn_transformation(
+                name_appendix)
+
+            connect_rules = set(map(
+                lambda x: Rule(
+                    x.left,
+                    [x.rights[0], self.renamer(x.rights[1], name_appendix, self.members)]
+                ),
+                rules_to_replace
+            ))
+
+            a.add(name_appendix)
+            f.update(fresh_rules)
+            c.update(connect_rules)
+            r.update(rules_to_replace)
+
+        return c|f, r, a
