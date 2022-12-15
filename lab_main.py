@@ -3,10 +3,8 @@ import uuid
 
 
 def parse():
-    with open("test.CFG", "r") as test_src:
+    with open("tests_for_lab_3.CFG", "r") as test_src:
         return CFG_Parser(test_src.readlines()).parse_rules()
-
-    regular_approximation(grammar)
 
 
 def check_lab_3(grammar):
@@ -25,9 +23,9 @@ def check_lab_3(grammar):
         print('\n\n-------CHECKING IDEMPOTENCY-------\n\n')
         print(m)
         m.check_idempotence()
-    # print('\nНАЙДЕНЫ МЮРЕСЫ:')
-    # for m in grammar.mureses2:
-    #     print(m)
+    print('\nНАЙДЕНЫ МЮРЕСЫ:')
+    for m in grammar.mureses2:
+        print(m)
 
 
 def regular_approximation(grammar):

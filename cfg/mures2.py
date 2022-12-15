@@ -21,6 +21,7 @@ class Mures:
                 len(list(filter(lambda x: x in members, r.rights))) == 0,
             grammar.rules))
         self.i = 1
+
     def __repr__(self):
         nl = '\n'
         # members = f'members: {" ".join(map(str, self.members))}'
@@ -47,7 +48,10 @@ class Mures:
         return o in self.members or o in self.internal_rules or o in self.escape_rules
 
     def check_idempotence(self):
-
+        '''
+        Работает с ХНФ
+        Строит КА правого и левого нарастания мюресса
+        '''
         self.left_rules = set()
         self.right_rules = set()
         for rule in self.internal_rules:
@@ -71,6 +75,12 @@ class Mures:
         right_fa.to_dot('many_graphs.dot')
 
     def build_left_fa(self, with_respect_node: str):
+        '''
+        Строит КА левого наростания muresa 
+        Работает с self.left_rules
+        Возвращает КА левого наростания
+        '''
+        assert self.left_rules is not None
         print('\n\nBUILDING LEFT FA:')
         with_respect_node = str(with_respect_node)
         fa = FA()
@@ -96,6 +106,12 @@ class Mures:
         return fa
 
     def build_right_fa(self, with_respect_node: str):
+        '''
+        Строит КА правого наростания muresa 
+        Работает с self.right_rules
+        Возвращает КА правого наростания
+        '''
+        assert self.right_rules is not None
         print('\n\nBUILDING RIGHT FA:')
         with_respect_node = str(with_respect_node)
         fa = FA()
@@ -122,10 +138,17 @@ class Mures:
 
     @staticmethod
     def get_streak(a):
+        '''
+        Принимает нетерминал
+        Возвращает нетерминал, к имени которого приписан штришок
+        '''
         return Nterm(a.name[:-1] + "'" + ']')
 
     def MN_transformation(self):
-
+        '''
+        MN-трансформация 
+        Возвращает множество новых правил и множество правил, которые нужно заменить на новые
+        '''
         new_rules = set()
         old_rules = set()
 
@@ -179,29 +202,49 @@ class Mures:
         return new_rules, old_rules
 
     def renamer(self, a, adding_name, scope):
+        '''
+        Принимает терм или нетерминал, постфикс имени и множество scope
+        Если терм, то возвращает его
+        Если нетерминал не в scope, то возвращает его
+        Если нетерминал в scope, то взвращается новый нетерминал, к имени которого приписа постфикс имени
+        '''
         if isinstance(a, Term) or a not in scope:
             return a
         else:
             return Nterm(a.name[:-1] + adding_name + ']')
 
     def get_fresh_renamed_copy_of_mn_transformation(self, name_appendix):
+        '''
+        Над правилами мюреса производится MN-трансформация
+        Каждому нетерминалу из обновленных правил (а в мюресе хотя бы 2 таких точно будет)
+        присваивается новое имя - метка adding_scope
+        Возвращается множество помеченых правил - результата MN-трансформации
+        '''
         def rename_rule(rule, adding_name, scope):
+            '''
+            Возвращает правило, в котором к именам всех нетерминалов из scope приписан именной постфикс 
+            '''
             return Rule(
                 self.renamer(rule.left, adding_name, scope),
                 list(map(lambda x: self.renamer(x, adding_name, scope), rule.rights))
             )
         new_rules, _ = self.MN_transformation()
 
-        extended_members = self.members | set(map(self.get_streak, self.members))
+        extended_members = self.members | set(
+            map(self.get_streak, self.members))
         new_rules = set(
             map(lambda x: rename_rule(x, name_appendix, extended_members), new_rules))
 
         return new_rules
 
-    i = 1
-
     def remove_all_right_productions(self):
+        '''
+        Убрает все правосторониие продукции
+        '''
         def collect_all_right_relations():
+            '''
+            Находит все правила вида A -> B, где A и B из мюреса
+            '''
             pairs = set()
             for rule in self.internal_rules:
                 if len(rule.rights) == 2 and rule.rights[1] in self.members:
@@ -213,29 +256,37 @@ class Mures:
 
         pairs_to_remove = collect_all_right_relations()
 
-        f,c,r,a = set(), set(), set(), set()
+        f, c, r, a = set(), set(), set(), set()
 
+        # Для каждой пары, которую надо устранить
         for pair in pairs_to_remove:
             rules_to_replace = set(filter(lambda x: len(
                 x.rights) == 2 and x.rights[1] == pair[1], self.internal_rules))
 
             # name_appendix = '_' + uuid.uuid4().hex[:3].upper()
+            # делаем копию МН-трансформации, которой присвоим метку name_appendix
             name_appendix = f'_group{self.i}'
-            self.i+=1
+            self.i += 1
             fresh_rules = self.get_fresh_renamed_copy_of_mn_transformation(
                 name_appendix)
 
+            # присоединяем эту новую грамматику к нашей
             connect_rules = set(map(
                 lambda x: Rule(
                     x.left,
-                    [x.rights[0], self.renamer(x.rights[1], name_appendix, self.members)]
+                    [x.rights[0], self.renamer(
+                        x.rights[1], name_appendix, self.members)]
                 ),
                 rules_to_replace
             ))
 
+            # множество меток новых групп
             a.add(name_appendix)
+            # правила новых кусков грамматик
             f.update(fresh_rules)
+            # правила связывающие эту и новые грамматики
             c.update(connect_rules)
+            # правила, которые из этой грамматики надо удалить
             r.update(rules_to_replace)
 
-        return c|f, r, a
+        return c | f, r, a

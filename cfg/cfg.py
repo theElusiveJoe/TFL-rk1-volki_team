@@ -864,6 +864,9 @@ class CFG():
         return True
 
     def build_fa_for_appendix(self, node: str):
+        '''
+        Возвращает КА для нетерминала, который не раскроется ни в один мюрес
+        '''
         # print('NodE:', node, type(node))
         # print(list(map(type, self.finite_nodes)))
         assert node in set(map(str, self.finite_nodes))
@@ -915,29 +918,36 @@ class CFG():
     def remove_all_right_productions(self, debug=False):
         self.build_mureses_2()
 
+        # если мюресов нет, ничего не меняем 
+        if not self.mureses2:
+            return self
+
+        print('МЮРЕСЫ:')
+        for m in self.mureses2:
+            print(m)
+
         new_rules = set()
         old_rules = set()
-
         for mures in self.mureses2:
             newr, oldr, appendixes = mures.remove_all_right_productions()
             new_rules = new_rules | newr
             old_rules = old_rules | oldr
-
         rules = (self.rules - old_rules) | new_rules
 
-        if debug:
-            print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
-            groups = {'': list()}
-            for a in appendixes:
-                groups[a] = list()
-            for rule in rules:
-                s = str(rule.left)
-                s2 = str(rule)
-                if '_' not in s:
-                    groups[''].append(s2)
-                else:
-                    a = '_' + s.split('_')[-1][:-1]
-                    groups[a].append(s2)
-            print(json.dumps(groups, indent=4))
+        # if debug:
+        #     print('ОБНОВЛЕННЫЕ ПРАВИЛА:')
+        #     groups = {'': list()}
+        #     for a in appendixes:
+        #         groups[a] = list()
+        #     for rule in rules:
+        #         s = str(rule.left)
+        #         s2 = str(rule)
+        #         print(s, s2)
+        #         if '_' not in s:
+        #             groups[''].append(s2)
+        #         else:
+        #             a = '_' + s.split('_')[-1][:-1]
+        #             groups[a].append(s2)
+        #     print(json.dumps(groups, indent=4))
 
         return CFG(rules)
